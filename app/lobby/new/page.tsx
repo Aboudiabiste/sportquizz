@@ -7,8 +7,8 @@ import type { Difficulty, ScoringMode } from '@/lib/supabase'
 
 interface QuizSummary { id: string; title: string; sport: string; description: string | null }
 
-const SPORT_EMOJI: Record<string, string> = { football: '⚽', f1: '🏎️', tennis: '🎾', cyclisme: '🚴', autre: '🏆' }
-const SPORT_LABELS: Record<string, string> = { football: 'Football', f1: 'Formule 1', tennis: 'Tennis', cyclisme: 'Cyclisme', autre: 'Autre' }
+const SPORT_EMOJI: Record<string, string> = { football: '⚽', cyclisme: '🚴', mma: '🥊', tennis: '🎾', f1: '🏎️', autre: '🏆' }
+const SPORT_LABELS: Record<string, string> = { football: 'Football', cyclisme: 'Cyclisme', mma: 'MMA', tennis: 'Tennis', f1: 'Formule 1', autre: 'Autres' }
 const ALL_SPORTS = Object.keys(SPORT_EMOJI)
 
 export default function NewGamePage() {
@@ -19,7 +19,7 @@ export default function NewGamePage() {
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([])
   const [sportFilter, setSportFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
-  const [quizId, setQuizId] = useState<string>('demo')
+  const [quizId, setQuizId] = useState<string>('')
 
   // Step 2 — options
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
@@ -40,9 +40,7 @@ export default function NewGamePage() {
     .filter(q => sportFilter === 'all' || q.sport === sportFilter)
     .filter(q => !search.trim() || q.title.toLowerCase().includes(search.trim().toLowerCase()))
 
-  const selectedQuiz = quizId === 'demo'
-    ? { title: 'Buteurs LDC (démo)', sport: 'football' }
-    : quizzes.find(q => q.id === quizId)
+  const selectedQuiz = quizzes.find(q => q.id === quizId)
 
   async function launch() {
     const trimName = name.trim()
@@ -56,7 +54,7 @@ export default function NewGamePage() {
         body: JSON.stringify({
           difficulty,
           scoring_mode: scoringMode,
-          quiz_id: quizId === 'demo' ? null : quizId,
+          quiz_id: quizId || null,
         }),
       })
       const data = await res.json()
@@ -152,16 +150,6 @@ export default function NewGamePage() {
 
             {/* Quiz list */}
             <div className="space-y-2">
-              {/* Demo */}
-              {(sportFilter === 'all' || sportFilter === 'football') && (
-                <QuizCard
-                  emoji="⚽"
-                  title="Buteurs LDC all-time"
-                  subtitle="Quiz de démonstration · Football"
-                  selected={quizId === 'demo'}
-                  onSelect={() => setQuizId('demo')}
-                />
-              )}
               {filtered.map(q => (
                 <QuizCard
                   key={q.id}
@@ -170,6 +158,7 @@ export default function NewGamePage() {
                   subtitle={`${SPORT_LABELS[q.sport] ?? q.sport}${q.description ? ' · ' + q.description : ''}`}
                   selected={quizId === q.id}
                   onSelect={() => setQuizId(q.id)}
+                  onNext={() => setStep(2)}
                 />
               ))}
             </div>
@@ -191,7 +180,8 @@ export default function NewGamePage() {
 
             <button
               onClick={() => setStep(2)}
-              className="w-full bg-sky-500 hover:bg-sky-400 active:scale-95 text-black font-bold py-4 rounded-2xl text-lg transition-all mt-2"
+              disabled={!quizId}
+              className="w-full bg-sky-500 hover:bg-sky-400 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold py-4 rounded-2xl text-lg transition-all mt-2"
             >
               Suivant →
             </button>
@@ -313,20 +303,27 @@ export default function NewGamePage() {
   )
 }
 
-function QuizCard({ emoji, title, subtitle, selected, onSelect }: {
-  emoji: string; title: string; subtitle: string; selected: boolean; onSelect: () => void
+function QuizCard({ emoji, title, subtitle, selected, onSelect, onNext }: {
+  emoji: string; title: string; subtitle: string; selected: boolean; onSelect: () => void; onNext?: () => void
 }) {
   return (
-    <button
+    <div
       onClick={onSelect}
-      className={`w-full text-left flex items-center gap-4 px-4 py-3 rounded-2xl transition-all ${selected ? 'bg-sky-500/15 ring-2 ring-sky-500' : 'bg-zinc-900 hover:bg-zinc-800'}`}
+      className={`w-full text-left flex items-center gap-4 px-4 py-3 rounded-2xl transition-all cursor-pointer ${selected ? 'bg-sky-500/15 ring-2 ring-sky-500' : 'bg-zinc-900 hover:bg-zinc-800'}`}
     >
       <span className="text-2xl shrink-0">{emoji}</span>
       <div className="flex-1 min-w-0">
-        <p className={`font-semibold text-sm truncate ${selected ? 'text-sky-400' : ''}`}>{title}</p>
-        <p className="text-zinc-500 text-xs truncate">{subtitle}</p>
+        <p className={`font-semibold text-sm line-clamp-2 leading-tight ${selected ? 'text-sky-400' : ''}`}>{title}</p>
+        <p className="text-zinc-500 text-xs truncate mt-0.5">{subtitle}</p>
       </div>
-      {selected && <span className="text-sky-400 shrink-0">✓</span>}
-    </button>
+      {selected && onNext && (
+        <button
+          onClick={e => { e.stopPropagation(); onNext() }}
+          className="shrink-0 bg-sky-500 hover:bg-sky-400 active:scale-95 text-black font-bold px-4 py-2 rounded-xl text-sm transition-all"
+        >
+          Choisir →
+        </button>
+      )}
+    </div>
   )
 }

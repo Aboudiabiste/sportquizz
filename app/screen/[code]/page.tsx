@@ -2,13 +2,12 @@
 
 import { useEffect, useState, use, useCallback } from 'react'
 import { supabase, type Game, type Quiz, type Player, type Answer, type Difficulty, getVisibleColumns } from '@/lib/supabase'
-import { DEMO_QUIZ } from '@/lib/demo-quiz'
 import Timer from '@/app/components/Timer'
 
 export default function ScreenPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params)
   const [game, setGame] = useState<Game | null>(null)
-  const [quiz, setQuiz] = useState<Quiz>(DEMO_QUIZ)
+  const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [answers, setAnswers] = useState<Answer[]>([])
 
@@ -54,7 +53,7 @@ export default function ScreenPage({ params }: { params: Promise<{ code: string 
     if (game?.id) loadAnswers(game.id)
   }, [game?.id, loadAnswers])
 
-  if (!game) {
+  if (!game || !quiz) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
         <p className="text-zinc-400 text-2xl animate-pulse">Chargement…</p>

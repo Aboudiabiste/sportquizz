@@ -12,7 +12,9 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/quizzes/[id]'>)
     .single()
 
   if (error || !data) return NextResponse.json({ error: 'Quiz introuvable' }, { status: 404 })
-  return NextResponse.json(data)
+  return NextResponse.json(data, {
+    headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+  })
 }
 
 export async function DELETE(_req: Request, ctx: RouteContext<'/api/quizzes/[id]'>) {

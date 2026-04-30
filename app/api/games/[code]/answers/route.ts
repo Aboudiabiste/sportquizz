@@ -48,16 +48,18 @@ export async function POST(req: Request, ctx: RouteContext<'/api/games/[code]/an
     points = Math.max(1, Math.round(1 + (row_index / (total_rows - 1)) * 4))
   }
 
+  // INSERT strict : si la case existe déjà pour ce joueur → 409 sans re-scorer
   const { data: answer, error } = await supabaseAdmin
     .from('answers')
-    .upsert(
-      { game_id: game.id, row_index, column_key, player_id },
-      { onConflict: 'game_id,row_index,column_key,player_id' }
-    )
+    .insert({ game_id: game.id, row_index, column_key, player_id })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // 23505 = unique_violation → case déjà répondue par ce joueur
+    if (error.code === '23505') return NextResponse.json({ error: 'Déjà répondu' }, { status: 409 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await supabaseAdmin.rpc('increment_player_score', { p_player_id: player_id, p_points: points })
 

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <!-- Fond plein pour maskable (adaptive icon Android) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Ballon : cercle blanc -->
+  <circle cx="256" cy="215" r="112" fill="white"/>
+  <!-- Patch central (pentagone) -->
+  <polygon points="256,173 296,202 282,248 230,248 216,202" fill="#0f172a"/>
+  <!-- Lignes de couture vers les 3 patches extérieurs -->
+  <line x1="256" y1="173" x2="256" y2="106" stroke="#0f172a" stroke-width="11" stroke-linecap="round"/>
+  <line x1="296" y1="202" x2="356" y2="256" stroke="#0f172a" stroke-width="11" stroke-linecap="round"/>
+  <line x1="216" y1="202" x2="156" y2="256" stroke="#0f172a" stroke-width="11" stroke-linecap="round"/>
+  <!-- Patches extérieurs -->
+  <circle cx="256" cy="97" r="21" fill="#0f172a"/>
+  <circle cx="364" cy="264" r="21" fill="#0f172a"/>
+  <circle cx="148" cy="264" r="21" fill="#0f172a"/>
+  <!-- Texte QUIZ -->
+  <text x="256" y="404"
+    font-family="'Arial Black', Arial, sans-serif"
+    font-size="78"
+    font-weight="900"
+    fill="white"
+    text-anchor="middle"
+    letter-spacing="5">QUIZ</text>
+</svg>

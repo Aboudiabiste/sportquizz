@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, type Game, type Player } from '@/lib/supabase'
@@ -13,6 +13,7 @@ export default function LobbyPage({ params }: { params: Promise<{ code: string }
   const [playerId, setPlayerId] = useState<string>('')
   const [starting, setStarting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const gameRef = useRef<Game | null>(null)
 
   useEffect(() => {
     const pid = sessionStorage.getItem(`player_${code}`) ?? ''
@@ -23,19 +24,26 @@ export default function LobbyPage({ params }: { params: Promise<{ code: string }
         fetch(`/api/games/${code}`),
         fetch(`/api/games/${code}/players`),
       ])
-      if (gRes.ok) setGame(await gRes.json())
+      if (gRes.ok) {
+        const g = await gRes.json()
+        gameRef.current = g
+        setGame(g)
+      }
       if (pRes.ok) setPlayers(await pRes.json())
     }
     load()
 
     const channel = supabase
       .channel(`lobby-${code}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' },
-        () => fetch(`/api/games/${code}/players`).then(r => r.json()).then(setPlayers)
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        const id = gameRef.current?.id
+        if (id) supabase.from('players').select('*').eq('game_id', id)
+          .then(({ data }) => { if (data) setPlayers(data as Player[]) })
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `code=eq.${code}` },
         (payload) => {
           const g = payload.new as Game
+          gameRef.current = g
           setGame(g)
           if (g.status === 'active') router.push(`/play/${code}`)
         }

@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState, use, useCallback } from 'react'
+import { useEffect, useState, use, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, type Game, type Quiz, type Player, type Answer, type Difficulty } from '@/lib/supabase'
-import { DEMO_QUIZ } from '@/lib/demo-quiz'
 import QuizTable from '@/app/components/QuizTable'
 import Timer from '@/app/components/Timer'
 
@@ -16,11 +15,8 @@ export default function PlayPage({ params }: { params: Promise<{ code: string }>
   const [answers, setAnswers] = useState<Answer[]>([])
   const [playerId, setPlayerId] = useState<string>('')
   const [finished, setFinished] = useState(false)
-
-  const loadAnswers = useCallback(async (gameId: string) => {
-    const { data } = await supabase.from('answers').select('*').eq('game_id', gameId)
-    if (data) setAnswers(data as Answer[])
-  }, [])
+  // Ref pour éviter une dépendance sur game?.id dans useEffect (évite re-subscribe)
+  const gameRef = useRef<Game | null>(null)
 
   useEffect(() => {
     const pid = sessionStorage.getItem(`player_${code}`) ?? ''
@@ -31,43 +27,45 @@ export default function PlayPage({ params }: { params: Promise<{ code: string }>
       if (!res.ok) { router.push('/join'); return }
       const g: Game = await res.json()
       if (g.status === 'lobby') { router.push(`/lobby/${code}`); return }
+      gameRef.current = g
       setGame(g)
 
-      // Load quiz from DB if set, otherwise use demo
-      if (g.quiz_id) {
-        const qRes = await fetch(`/api/quizzes/${g.quiz_id}`)
-        if (qRes.ok) setQuiz(await qRes.json())
-        else setQuiz(DEMO_QUIZ)
-      } else {
-        setQuiz(DEMO_QUIZ)
-      }
-
-      const pRes = await fetch(`/api/games/${code}/players`)
+      // Quiz + players + answers en parallèle (au lieu de 3 requêtes séquentielles)
+      const [qRes, pRes, { data: answersData }] = await Promise.all([
+        g.quiz_id ? fetch(`/api/quizzes/${g.quiz_id}`) : Promise.resolve(null),
+        fetch(`/api/games/${code}/players`),
+        supabase.from('answers').select('*').eq('game_id', g.id),
+      ])
+      if (qRes?.ok) setQuiz(await qRes.json())
       if (pRes.ok) setPlayers(await pRes.json())
-
-      await loadAnswers(g.id)
+      if (answersData) setAnswers(answersData as Answer[])
     }
     load()
 
     const channel = supabase
       .channel(`play-${code}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'answers' },
-        () => { if (game?.id) loadAnswers(game.id) }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'answers' }, () => {
+        const id = gameRef.current?.id
+        if (id) supabase.from('answers').select('*').eq('game_id', id)
+          .then(({ data }) => { if (data) setAnswers(data as Answer[]) })
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `code=eq.${code}` },
         (payload) => {
           const g = payload.new as Game
+          gameRef.current = g
           setGame(g)
           if (g.status === 'finished') setFinished(true)
         }
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' },
-        () => fetch(`/api/games/${code}/players`).then(r => r.json()).then(setPlayers)
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        const id = gameRef.current?.id
+        if (id) supabase.from('players').select('*').eq('game_id', id)
+          .then(({ data }) => { if (data) setPlayers(data as Player[]) })
+      })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [code, router, loadAnswers, game?.id])
+  }, [code, router]) // Plus game?.id ni loadAnswers dans les deps → subscribe une seule fois
 
   async function handleAnswer(rowIndex: number, columnKey: string) {
     if (!game || !playerId || !quiz) return
@@ -79,9 +77,8 @@ export default function PlayPage({ params }: { params: Promise<{ code: string }>
     })
     if (!res.ok) return
 
-    await loadAnswers(game.id)
-
-    // Check if this player completed the whole quiz
+    // Pas de loadAnswers ici : le realtime answers va se déclencher automatiquement
+    // Vérification de completion en optimiste sur l'état courant
     const answerCols = quiz.columns.filter(c => c.is_answer)
     const totalCells = quiz.rows.length * answerCols.length
     const myAnswers = answers.filter(a => a.player_id === playerId).length + 1
@@ -104,8 +101,7 @@ export default function PlayPage({ params }: { params: Promise<{ code: string }>
     setFinished(true)
   }
 
-  const myScore = players.find(p => p.id === playerId)?.score ?? 0
-  const sortedPlayers = [...players].sort((a, b) => b.score - a.score)
+  const sortedPlayers = useMemo(() => [...players].sort((a, b) => b.score - a.score), [players])
 
   if (!game || !quiz) {
     return (
