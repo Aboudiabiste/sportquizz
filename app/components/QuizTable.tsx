@@ -79,7 +79,8 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
     setActiveCell({ row, col })
     setInputValue('')
     setFlashWrong(false)
-    setTimeout(() => inputRef.current?.focus(), 30)
+    // Pas de re-focus ici : le clavier reste ouvert grâce à preventDefault sur pointerdown
+    inputRef.current?.focus()
   }
 
   function checkMatch(value: string) {
@@ -233,8 +234,8 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
                   return (
                     <td
                       key={col.key}
-                      className={`px-1.5 py-2 leading-snug max-w-[120px] break-words${hiddenOnMobile.has(col.key) ? ' hidden sm:table-cell' : ''} ${style} ${col.is_answer && !foundCells.has(cellKey) ? 'cursor-pointer' : ''} ${isFlashing ? 'cell-pop' : 'transition-all'}`}
-                      onClick={() => col.is_answer && selectCell(rowIndex, col.key)}
+                      className={`px-1.5 py-2 leading-snug max-w-30 break-words${hiddenOnMobile.has(col.key) ? ' hidden sm:table-cell' : ''} ${style} ${col.is_answer && !foundCells.has(cellKey) ? 'cursor-pointer' : ''} ${isFlashing ? 'cell-pop' : 'transition-all'}`}
+                      onPointerDown={col.is_answer && !foundCells.has(cellKey) ? e => { e.preventDefault(); selectCell(rowIndex, col.key) } : undefined}
                     >
                       {isActive && !foundCells.has(cellKey) ? (
                         <span className="text-sky-400">←</span>
