@@ -16,6 +16,8 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
   const [inputValue, setInputValue] = useState('')
   const [activeCell, setActiveCell] = useState<{ row: number; col: string } | null>(null)
   const [flashWrong, setFlashWrong] = useState(false)
+  const [flashCorrect, setFlashCorrect] = useState(false)        // flash vert sur l'input
+  const [flashedCells, setFlashedCells] = useState<Set<string>>(new Set()) // cellules en animation
   const [pendingFound, setPendingFound] = useState<Set<string>>(new Set())
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -44,18 +46,13 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
   const foundCount = foundCells.size
   const allFound = foundCount >= totalAnswerCells
 
-  // Colonne à masquer sur mobile : colonnes hint avec hint_order >= 3 (anecdotes, détails secondaires)
-  // On garde : numéro, réponse, et les 2 premiers indices (hint_order 0 et 1 si non-réponse)
   const hiddenOnMobile = useMemo(() => {
     const nonAnswerCols = quiz.columns
       .filter(c => !c.is_answer)
       .sort((a, b) => a.hint_order - b.hint_order)
-    // Garde les 2 premiers, masque le reste sur mobile
-    const toHide = new Set(nonAnswerCols.slice(2).map(c => c.key))
-    return toHide
+    return new Set(nonAnswerCols.slice(2).map(c => c.key))
   }, [quiz.columns])
 
-  // Nettoie les optimistic confirmés par le serveur
   useEffect(() => {
     setPendingFound(prev => {
       const next = new Set([...prev].filter(k => !serverFound.has(k)))
@@ -63,7 +60,6 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
     })
   }, [serverFound])
 
-  // Auto-focus sur la première cellule vide au montage
   useEffect(() => {
     if (disabled || allFound) return
     for (let r = 0; r < quiz.rows.length; r++) {
@@ -86,7 +82,6 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
     setTimeout(() => inputRef.current?.focus(), 30)
   }
 
-  // Valide TOUTES les cellules qui correspondent à la réponse saisie (pas seulement la première)
   function checkMatch(value: string) {
     if (!value.trim()) return false
 
@@ -104,14 +99,20 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
     if (matched.length === 0) return false
 
     const matchedKeys = matched.map(m => `${m.r}-${m.colKey}`)
-    // Calcule le nouvel état found AVANT la mise à jour React (pour moveToNextEmpty)
     const newFoundCells = new Set([...foundCells, ...matchedKeys])
 
     setPendingFound(prev => new Set([...prev, ...matchedKeys]))
     matched.forEach(m => onAnswer(m.r, m.colKey))
     setInputValue('')
 
-    // Avance vers la prochaine cellule vide en tenant compte des cellules qui viennent d'être validées
+    // Flash vert sur l'input
+    setFlashCorrect(true)
+    setTimeout(() => setFlashCorrect(false), 350)
+
+    // Flash pop sur les cellules trouvées
+    setFlashedCells(new Set(matchedKeys))
+    setTimeout(() => setFlashedCells(new Set()), 600)
+
     const last = matched[matched.length - 1]
     moveToNextEmpty(last.r, last.colKey, newFoundCells)
 
@@ -187,7 +188,13 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
         <input
           ref={inputRef}
           autoFocus
-          className={`w-full bg-zinc-800 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-sky-500 text-sm transition-all ${flashWrong ? 'ring-2 ring-red-500 shake' : ''}`}
+          className={`w-full rounded-xl px-4 py-3 outline-none text-sm transition-all duration-200 ${
+            flashCorrect
+              ? 'bg-sky-500/20 ring-2 ring-sky-400 text-sky-300'
+              : flashWrong
+              ? 'bg-zinc-800 ring-2 ring-red-500 shake'
+              : 'bg-zinc-800 focus:ring-2 ring-sky-500'
+          }`}
           placeholder="Tape ta réponse…"
           value={inputValue}
           onChange={e => { setInputValue(e.target.value); checkMatch(e.target.value) }}
@@ -222,10 +229,11 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
                   const { text, style } = getCellDisplay(rowIndex, col, row)
                   const cellKey = `${rowIndex}-${col.key}`
                   const isActive = activeCell?.row === rowIndex && activeCell?.col === col.key
+                  const isFlashing = flashedCells.has(cellKey)
                   return (
                     <td
                       key={col.key}
-                      className={`px-1.5 py-2 transition-all leading-snug max-w-[120px] break-words${hiddenOnMobile.has(col.key) ? ' hidden sm:table-cell' : ''} ${style} ${col.is_answer && !foundCells.has(cellKey) ? 'cursor-pointer' : ''}`}
+                      className={`px-1.5 py-2 leading-snug max-w-[120px] break-words${hiddenOnMobile.has(col.key) ? ' hidden sm:table-cell' : ''} ${style} ${col.is_answer && !foundCells.has(cellKey) ? 'cursor-pointer' : ''} ${isFlashing ? 'cell-pop' : 'transition-all'}`}
                       onClick={() => col.is_answer && selectCell(rowIndex, col.key)}
                     >
                       {isActive && !foundCells.has(cellKey) ? (
@@ -249,6 +257,14 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
           75% { transform: translateX(6px); }
         }
         .shake { animation: shake 0.3s ease; }
+
+        @keyframes cellPop {
+          0%   { transform: scale(1);    background-color: transparent; }
+          30%  { transform: scale(1.15); background-color: rgba(14,165,233,0.25); }
+          70%  { transform: scale(1.05); background-color: rgba(14,165,233,0.15); }
+          100% { transform: scale(1);    background-color: transparent; }
+        }
+        .cell-pop { animation: cellPop 0.55s ease; }
       `}</style>
     </div>
   )
