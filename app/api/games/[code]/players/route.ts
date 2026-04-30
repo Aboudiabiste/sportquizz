@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
 
 export async function GET(_req: Request, ctx: RouteContext<'/api/games/[code]/players'>) {
@@ -43,7 +43,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/games/[code]/pl
     .eq('game_id', game.id)
   if ((count ?? 0) >= 5) return NextResponse.json({ error: 'Partie complète (5 joueurs max)' }, { status: 400 })
 
-  const { data: player, error } = await supabaseAdmin
+  const { data: player, error } = await getSupabaseAdmin()
     .from('players')
     .insert({ game_id: game.id, name })
     .select()

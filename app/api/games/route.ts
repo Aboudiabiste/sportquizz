@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
 import type { Difficulty, ScoringMode } from '@/lib/supabase'
 
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const { data: code, error: codeErr } = await supabase.rpc('generate_game_code')
   if (codeErr) return NextResponse.json({ error: 'Impossible de générer un code' }, { status: 500 })
 
-  const { data: game, error } = await supabaseAdmin
+  const { data: game, error } = await getSupabaseAdmin()
     .from('games')
     .insert({ code, difficulty, scoring_mode, status: 'lobby', quiz_id })
     .select()

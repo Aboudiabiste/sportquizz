@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
 
 const ALLOWED_PATCH_FIELDS = ['status', 'started_at', 'finished_at', 'winner_id'] as const
@@ -32,7 +32,7 @@ export async function PATCH(req: Request, ctx: RouteContext<'/api/games/[code]'>
     return NextResponse.json({ error: 'Aucun champ valide' }, { status: 400 })
   }
 
-  const { data: game, error } = await supabaseAdmin
+  const { data: game, error } = await getSupabaseAdmin()
     .from('games')
     .update(update)
     .eq('code', safeCode)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateQuiz, TEMPLATES } from '@/lib/quiz/generator'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET() {
   return NextResponse.json(TEMPLATES)
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
     // If save=true, persist to DB
     if (body.save) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await getSupabaseAdmin()
         .from('quizzes')
         .insert(quiz)
         .select()

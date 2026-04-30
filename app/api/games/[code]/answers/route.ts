@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request, ctx: RouteContext<'/api/games/[code]/answers'>) {
@@ -49,7 +49,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/games/[code]/an
   }
 
   // INSERT strict : si la case existe déjà pour ce joueur → 409 sans re-scorer
-  const { data: answer, error } = await supabaseAdmin
+  const { data: answer, error } = await getSupabaseAdmin()
     .from('answers')
     .insert({ game_id: game.id, row_index, column_key, player_id })
     .select()
@@ -61,7 +61,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/games/[code]/an
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  await supabaseAdmin.rpc('increment_player_score', { p_player_id: player_id, p_points: points })
+  await getSupabaseAdmin().rpc('increment_player_score', { p_player_id: player_id, p_points: points })
 
   return NextResponse.json({ ...answer, points }, { status: 201 })
 }
