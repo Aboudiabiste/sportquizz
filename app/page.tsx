@@ -44,6 +44,19 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* Mode Carrière */}
+          <Link
+            href="/carriere"
+            className="w-full flex items-center gap-4 bg-violet-950/60 hover:bg-violet-900/60 active:scale-95 border border-violet-800/50 text-white font-bold py-4 px-6 rounded-2xl text-center transition-all shadow-lg shadow-violet-950/40"
+          >
+            <span className="text-2xl">🃏</span>
+            <div className="text-left flex-1">
+              <p className="font-black text-base leading-tight">Devine la Carrière</p>
+              <p className="text-violet-300/70 text-xs font-normal mt-0.5">Identifie le joueur grâce à sa carrière</p>
+            </div>
+            <span className="text-violet-400 text-sm">→</span>
+          </Link>
+
           <p className="text-zinc-700 text-xs">Max 5 joueurs · Gratuit · Aucun compte requis</p>
         </div>
       </div>
