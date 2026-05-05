@@ -184,23 +184,25 @@ export default function QuizTable({ quiz, difficulty, answers, currentPlayerId, 
         </div>
       </div>
 
-      {/* Input */}
+      {/* Input — sticky pour rester visible quand on scrolle dans le tableau */}
       {!disabled && !allFound && (
-        <input
-          ref={inputRef}
-          autoFocus
-          className={`w-full rounded-xl px-4 py-3 outline-none text-sm transition-all duration-200 ${
-            flashCorrect
-              ? 'bg-sky-500/20 ring-2 ring-sky-400 text-sky-300'
-              : flashWrong
-              ? 'bg-zinc-800 ring-2 ring-red-500 shake'
-              : 'bg-zinc-800 focus:ring-2 ring-sky-500'
-          }`}
-          placeholder="Tape ta réponse…"
-          value={inputValue}
-          onChange={e => { setInputValue(e.target.value); checkMatch(e.target.value) }}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-        />
+        <div className="sticky top-0 z-10 bg-zinc-950 py-1">
+          <input
+            ref={inputRef}
+            autoFocus
+            className={`w-full rounded-xl px-4 py-3 outline-none text-sm transition-all duration-200 ${
+              flashCorrect
+                ? 'bg-sky-500/20 ring-2 ring-sky-400 text-sky-300'
+                : flashWrong
+                ? 'bg-zinc-800 ring-2 ring-red-500 shake'
+                : 'bg-zinc-800 focus:ring-2 ring-sky-500'
+            }`}
+            placeholder="Tape ta réponse…"
+            value={inputValue}
+            onChange={e => { setInputValue(e.target.value); checkMatch(e.target.value) }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+          />
+        </div>
       )}
 
       {/* Table */}
